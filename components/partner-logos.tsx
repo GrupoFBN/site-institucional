@@ -59,6 +59,7 @@ function PartnerSlot({
 
   useEffect(() => {
     let tickTimeout: ReturnType<typeof setTimeout>;
+    let resetTimeout: ReturnType<typeof setTimeout>;
     // Only the very first call (mount) may target k=0 — a reschedule after
     // an actual fire must always jump to a strictly later cycle. Without
     // this distinction, position A (offsetMs=0) reads as already "past"
@@ -85,24 +86,35 @@ function PartnerSlot({
       tickTimeout = setTimeout(() => {
         hasFiredOnce = true;
         setAnimated(true);
-        setIndex((current) => current + 1);
+        // The snap-back-to-0 (once we've scrolled to the duplicate-of-first
+        // item at index items.length) is scheduled right here, in the same
+        // timer chain as the tick itself — not in a separate effect keyed
+        // off `index`. Two independently-scheduled timers racing to update
+        // the same index is exactly how it could end up incremented past
+        // items.length (e.g. a backgrounded tab delaying one timer but not
+        // the other): translateY would then scroll past the last stacked
+        // name into genuinely empty space, rendering that position blank.
+        setIndex((current) => {
+          const next = current + 1;
+          if (next === items.length) {
+            resetTimeout = setTimeout(() => {
+              setAnimated(false);
+              setIndex(0);
+            }, FLIP_DURATION_MS);
+          }
+          return next;
+        });
         scheduleNextTick();
       }, Math.max(0, nextFireAt - now));
     }
 
     scheduleNextTick();
 
-    return () => clearTimeout(tickTimeout);
-  }, [offsetMs, originTime]);
-
-  useEffect(() => {
-    if (index !== items.length) return;
-    const resetTimeout = setTimeout(() => {
-      setAnimated(false);
-      setIndex(0);
-    }, FLIP_DURATION_MS);
-    return () => clearTimeout(resetTimeout);
-  }, [index, items.length]);
+    return () => {
+      clearTimeout(tickTimeout);
+      clearTimeout(resetTimeout);
+    };
+  }, [offsetMs, originTime, items.length]);
 
   return (
     <div
@@ -111,7 +123,12 @@ function PartnerSlot({
     >
       <div
         style={{
-          transform: `translateY(-${index * ITEM_HEIGHT_PX}px)`,
+          // Clamped defensively: displayItems only has items.length + 1
+          // entries (0..items.length), so an out-of-range index would
+          // scroll past the last stacked name into empty space instead of
+          // erroring — clamping keeps that a visual no-op rather than a
+          // blank position.
+          transform: `translateY(-${Math.min(index, items.length) * ITEM_HEIGHT_PX}px)`,
           transitionProperty: "transform",
           transitionDuration: animated ? `${FLIP_DURATION_MS}ms` : "0ms",
           transitionTimingFunction: "ease-in-out",
