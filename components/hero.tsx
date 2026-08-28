@@ -26,7 +26,7 @@ export function Hero() {
           size="lg"
           className="pointer-events-auto mt-2"
         >
-          <Link href="/contato">Fale com a gente</Link>
+          <Link href="#">Fale com a gente</Link>
         </Button>
       </div>
     </section>

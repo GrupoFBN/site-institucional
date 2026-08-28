@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 
 const NAV_LINKS = [
   { href: "/", label: "Início" },
-  { href: "/sobre", label: "Sobre" },
-  { href: "/servicos", label: "Serviços" },
-  { href: "/contato", label: "Contato" },
+  { href: "#", label: "Sobre" },
+  { href: "#", label: "Serviços" },
+  { href: "#", label: "Contato" },
 ];
 
 export function Header() {
@@ -30,7 +30,7 @@ export function Header() {
         variant="outline"
         className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
       >
-        <Link href="/contato">Fale conosco</Link>
+        <Link href="#">Fale conosco</Link>
       </Button>
     </header>
   );

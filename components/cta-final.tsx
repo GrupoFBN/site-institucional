@@ -13,7 +13,7 @@ export function CtaFinal() {
         variant="outline"
         className="mt-8 border-white bg-transparent text-white hover:bg-white hover:text-primary"
       >
-        <Link href="/contato">Fale com a gente</Link>
+        <Link href="#">Fale com a gente</Link>
       </Button>
     </section>
   );

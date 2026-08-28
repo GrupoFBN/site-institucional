@@ -4,22 +4,22 @@ const COLUMNS = [
   {
     title: "Empresa",
     links: [
-      { href: "/sobre", label: "Sobre nós" },
+      { href: "#", label: "Sobre nós" },
       { href: "/", label: "Início" },
     ],
   },
   {
     title: "Serviços",
     links: [
-      { href: "/servicos", label: "Saúde" },
-      { href: "/servicos", label: "Odontológico" },
-      { href: "/servicos", label: "Vida" },
-      { href: "/servicos", label: "Previdência" },
+      { href: "#", label: "Saúde" },
+      { href: "#", label: "Odontológico" },
+      { href: "#", label: "Vida" },
+      { href: "#", label: "Previdência" },
     ],
   },
   {
     title: "Contato",
-    links: [{ href: "/contato", label: "Fale conosco" }],
+    links: [{ href: "#", label: "Fale conosco" }],
   },
 ];
 
