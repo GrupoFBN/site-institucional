@@ -11,6 +11,14 @@ const PARTNER_GROUPS: string[][] = [
 ];
 
 const ITEM_HEIGHT_PX = 24;
+// Fixed per-position width, wide enough for the longest name ("Seguradora
+// 25") at this text size. Without this, each position's width shrinks to
+// fit whatever name is currently showing — and since names have different
+// digit counts (1-9 vs 10-25), the row's total width changes tick to tick.
+// Right at the flex-wrap breakpoint, that was enough to sometimes overflow
+// and wrap 1-2 positions onto a clipped second line, making them appear to
+// randomly vanish.
+const ITEM_WIDTH_PX = 132;
 const FLIP_DURATION_MS = 600;
 const STAGGER_MS = 300;
 const PAUSE_AFTER_LAST_MS = 1000;
@@ -24,10 +32,15 @@ const CYCLE_MS =
 // locks — pure scroll distance, not the strip's height, so a taller strip
 // wouldn't need more scrolling to settle.
 const SETTLE_SCROLL_PX = 220;
+// Extra gap between the hero and where the strip finally locks, so it
+// settles a bit below the hero's edge instead of landing flush against it.
+// The starting (pulled-up, over-the-video) position is unaffected — see
+// fullPullUpPx below, which pulls up by this much extra to compensate.
+const SETTLE_GAP_PX = 40;
 // Fallback used for the very first paint, before the real height is
 // measured — avoids a visible jump once the effect measures the actual
 // element and corrects it (matches this strip's typical rendered height).
-const DEFAULT_PULL_PX = 72;
+const DEFAULT_PULL_PX = 72 + SETTLE_GAP_PX;
 
 function PartnerSlot({
   items,
@@ -81,7 +94,10 @@ function PartnerSlot({
   }, [index, items.length]);
 
   return (
-    <div className="overflow-hidden" style={{ height: ITEM_HEIGHT_PX }}>
+    <div
+      className="overflow-hidden"
+      style={{ height: ITEM_HEIGHT_PX, width: ITEM_WIDTH_PX }}
+    >
       <div
         style={{
           transform: `translateY(-${index * ITEM_HEIGHT_PX}px)`,
@@ -129,7 +145,7 @@ export function PartnerLogos() {
     // the page, not a viewport-relative "sticky" pin — so once it reaches
     // 0 it's just sitting at its normal spot in the document, unaffected
     // by any further scrolling.
-    const fullPullUpPx = el.offsetHeight;
+    const fullPullUpPx = el.offsetHeight + SETTLE_GAP_PX;
 
     function updatePullUp() {
       const progress = Math.min(1, window.scrollY / SETTLE_SCROLL_PX);
@@ -154,7 +170,10 @@ export function PartnerLogos() {
   return (
     <section
       ref={sectionRef}
-      style={{ transform: `translateY(-${pullUpPx}px)` }}
+      style={{
+        transform: `translateY(-${pullUpPx}px)`,
+        marginTop: SETTLE_GAP_PX,
+      }}
       className="relative z-10 px-6 py-6 pointer-events-none sm:px-10"
     >
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
