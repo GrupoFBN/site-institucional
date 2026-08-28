@@ -59,6 +59,14 @@ function PartnerSlot({
 
   useEffect(() => {
     let tickTimeout: ReturnType<typeof setTimeout>;
+    // Only the very first call (mount) may target k=0 — a reschedule after
+    // an actual fire must always jump to a strictly later cycle. Without
+    // this distinction, position A (offsetMs=0) reads as already "past"
+    // its own k=0 slot the instant its effect runs (any render/commit lag
+    // at all makes `now` a hair after originTime+0), so it always skipped
+    // straight to k=1 and lost a whole cycle on first paint — while B/C/D/E
+    // have enough offset headroom to never trip the same check.
+    let hasFiredOnce = false;
 
     // Each tick is scheduled against the absolute origin clock (originTime +
     // offsetMs + k*CYCLE_MS), not "wait CYCLE_MS from whenever the last
@@ -69,10 +77,13 @@ function PartnerSlot({
       const now = performance.now();
       const sinceFirstFire = now - (originTime + offsetMs);
       const cyclesElapsed =
-        sinceFirstFire < 0 ? 0 : Math.floor(sinceFirstFire / CYCLE_MS) + 1;
+        sinceFirstFire < 0
+          ? 0
+          : Math.floor(sinceFirstFire / CYCLE_MS) + (hasFiredOnce ? 1 : 0);
       const nextFireAt = originTime + offsetMs + cyclesElapsed * CYCLE_MS;
 
       tickTimeout = setTimeout(() => {
+        hasFiredOnce = true;
         setAnimated(true);
         setIndex((current) => current + 1);
         scheduleNextTick();
