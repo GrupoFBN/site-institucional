@@ -15,13 +15,17 @@ const INTERVAL_MS = 6000;
 
 export function HeroImageRoll() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [prevIndex, setPrevIndex] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (paused) return;
     timerRef.current = setInterval(() => {
-      setActiveIndex((current) => (current + 1) % IMAGES.length);
+      setActiveIndex((current) => {
+        setPrevIndex(current);
+        return (current + 1) % IMAGES.length;
+      });
     }, INTERVAL_MS);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -44,7 +48,9 @@ export function HeroImageRoll() {
             priority={index === 0}
             sizes="100vw"
             className={`object-cover ${
-              index === activeIndex ? "animate-kenburns" : ""
+              index === activeIndex || index === prevIndex
+                ? "animate-kenburns"
+                : ""
             }`}
             style={
               index === activeIndex && paused
