@@ -40,7 +40,7 @@ export function ServiceCards() {
               key={title}
               className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
-              <Icon className="mb-4 h-8 w-8 text-[#294799]" />
+              <Icon className="mb-4 h-8 w-8 text-primary" />
               <h3 className="mb-2 text-lg font-semibold">{title}</h3>
               <p className="text-sm text-gray-500">{description}</p>
             </div>

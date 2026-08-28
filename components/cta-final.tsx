@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 export function CtaFinal() {
   return (
-    <section className="bg-[#294799] px-6 py-20 text-center text-white sm:px-10">
+    <section className="bg-primary px-6 py-20 text-center text-white sm:px-10">
       <h2 className="mx-auto max-w-2xl text-3xl font-bold sm:text-4xl">
         Pronto pra oferecer o melhor benefício?
       </h2>
@@ -11,7 +11,7 @@ export function CtaFinal() {
         asChild
         size="lg"
         variant="outline"
-        className="mt-8 border-white bg-transparent text-white hover:bg-white hover:text-[#294799]"
+        className="mt-8 border-white bg-transparent text-white hover:bg-white hover:text-primary"
       >
         <Link href="/contato">Fale com a gente</Link>
       </Button>

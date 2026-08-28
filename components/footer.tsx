@@ -25,7 +25,7 @@ const COLUMNS = [
 
 export function Footer() {
   return (
-    <footer className="bg-[#0B1440] px-6 py-16 text-white sm:px-10">
+    <footer className="bg-brand-dark px-6 py-16 text-white sm:px-10">
       <div className="mx-auto grid max-w-5xl grid-cols-2 gap-10 sm:grid-cols-3">
         {COLUMNS.map((column) => (
           <div key={column.title}>
