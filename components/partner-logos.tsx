@@ -19,10 +19,12 @@ const CYCLE_MS =
 
 function PartnerSlot({
   items,
-  startOffsetMs,
+  offsetMs,
+  originTime,
 }: {
   items: string[];
-  startOffsetMs: number;
+  offsetMs: number;
+  originTime: number;
 }) {
   const [index, setIndex] = useState(0);
   const [animated, setAnimated] = useState(false);
@@ -31,18 +33,29 @@ function PartnerSlot({
   useEffect(() => {
     let tickTimeout: ReturnType<typeof setTimeout>;
 
-    function scheduleTick(delay: number) {
+    // Each tick is scheduled against the absolute origin clock (originTime +
+    // offsetMs + k*CYCLE_MS), not "wait CYCLE_MS from whenever the last
+    // callback happened to run" — the latter drifts, since setTimeout
+    // callbacks fire a little late and those small delays compound every
+    // cycle, eventually pulling the 5 positions' stagger out of sync.
+    function scheduleNextTick() {
+      const now = performance.now();
+      const sinceFirstFire = now - (originTime + offsetMs);
+      const cyclesElapsed =
+        sinceFirstFire < 0 ? 0 : Math.floor(sinceFirstFire / CYCLE_MS) + 1;
+      const nextFireAt = originTime + offsetMs + cyclesElapsed * CYCLE_MS;
+
       tickTimeout = setTimeout(() => {
         setAnimated(true);
         setIndex((current) => current + 1);
-        scheduleTick(CYCLE_MS);
-      }, delay);
+        scheduleNextTick();
+      }, Math.max(0, nextFireAt - now));
     }
 
-    scheduleTick(startOffsetMs);
+    scheduleNextTick();
 
     return () => clearTimeout(tickTimeout);
-  }, [startOffsetMs]);
+  }, [offsetMs, originTime]);
 
   useEffect(() => {
     if (index !== items.length) return;
@@ -78,11 +91,21 @@ function PartnerSlot({
 }
 
 export function PartnerLogos() {
+  // Shared clock origin — all 5 positions schedule their ticks relative to
+  // this single timestamp so their stagger stays exact over time, instead
+  // of each position drifting independently.
+  const [originTime] = useState(() => performance.now());
+
   return (
     <div className="relative z-10 px-6 py-6 pointer-events-none sm:px-10">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
         {PARTNER_GROUPS.map((items, i) => (
-          <PartnerSlot key={i} items={items} startOffsetMs={i * STAGGER_MS} />
+          <PartnerSlot
+            key={i}
+            items={items}
+            offsetMs={i * STAGGER_MS}
+            originTime={originTime}
+          />
         ))}
       </div>
     </div>
