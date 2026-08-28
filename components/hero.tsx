@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/header";
 import { HeroImageRoll } from "@/components/hero-image-roll";
-import { PartnerLogos } from "@/components/partner-logos";
 
 export function Hero() {
   return (
@@ -30,7 +29,6 @@ export function Hero() {
           <Link href="#">Fale com a gente</Link>
         </Button>
       </div>
-      <PartnerLogos />
     </section>
   );
 }
