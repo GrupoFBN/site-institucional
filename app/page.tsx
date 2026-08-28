@@ -1,5 +1,6 @@
 import { Hero } from "@/components/hero";
 import { PartnerLogos } from "@/components/partner-logos";
+import { TrustSection } from "@/components/trust-section";
 import { ServiceCards } from "@/components/service-cards";
 import { Stats } from "@/components/stats";
 import { CtaFinal } from "@/components/cta-final";
@@ -10,6 +11,7 @@ export default function Home() {
     <main>
       <Hero />
       <PartnerLogos />
+      <TrustSection />
       <ServiceCards />
       <Stats />
       <CtaFinal />
