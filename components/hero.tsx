@@ -10,7 +10,7 @@ export function Hero() {
       <div className="relative z-10">
         <Header />
       </div>
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center pointer-events-none">
         <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide backdrop-blur-sm">
           Corretora de benefícios
         </span>
@@ -24,7 +24,7 @@ export function Hero() {
         <Button
           asChild
           size="lg"
-          className="mt-2 bg-[#294799] hover:bg-[#1d3573]"
+          className="pointer-events-auto mt-2 bg-[#294799] hover:bg-[#1d3573]"
         >
           <Link href="/contato">Fale com a gente</Link>
         </Button>
