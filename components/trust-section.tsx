@@ -7,13 +7,21 @@ const HEADING_TEXT =
   "Gerencie os benefícios da sua empresa com confiança. A FBN entrega o controle, a confiabilidade e a expertise que sua empresa precisa.";
 const HEADING_WORDS = HEADING_TEXT.split(" ");
 
-// Reveal window, in fractions of viewport height (measured from the
-// paragraph's own top): starts painting words dark once the paragraph is
-// 85% down the screen (just entering from the bottom), finishes once it's
-// scrolled up to 35% down — so it paints while it's naturally being read,
-// not immediately on enter or only right at the top.
+// Reveal starts once the paragraph is 85% down the screen (just entering
+// from the bottom). It ends exactly at STICKY_TOP_PX — the same offset the
+// paragraph goes `sticky` at — so the text finishes painting dark right as
+// it locks into place, then stays fully painted while the cards below
+// scroll up into view underneath it (the spacer below provides that scroll
+// room; the paragraph's on-screen position is otherwise constant while
+// stuck, so a scroll-linked effect keyed off its position has to target
+// the same offset it sticks at, or it would never reach 100%).
 const REVEAL_START_VH = 0.85;
-const REVEAL_END_VH = 0.35;
+const STICKY_TOP_PX = 96; // matches the `top-24` class below
+
+// How much empty scroll room sits between the pinned heading and the
+// cards — this is what the user scrolls "through" while the heading stays
+// put and the cards rise into view from below the fold.
+const PIN_SPACER_VH = 45;
 
 // Placeholder for the real GIFs, until those are ready: at rest each card
 // is a plain gray box with a small icon; on hover the ENTIRE card becomes
@@ -67,8 +75,10 @@ export function TrustSection() {
       if (!el || window.innerHeight === 0) return;
       const top = el.getBoundingClientRect().top;
       const start = window.innerHeight * REVEAL_START_VH;
-      const end = window.innerHeight * REVEAL_END_VH;
-      const progress = Math.min(1, Math.max(0, (start - top) / (start - end)));
+      const progress = Math.min(
+        1,
+        Math.max(0, (start - top) / (start - STICKY_TOP_PX)),
+      );
       setRevealedCount(Math.round(progress * HEADING_WORDS.length));
     }
 
@@ -78,11 +88,11 @@ export function TrustSection() {
   }, []);
 
   return (
-    <section className="px-6 py-16 sm:px-10">
+    <section className="relative px-6 py-16 sm:px-10">
       <div className="mx-auto max-w-5xl">
         <p
           ref={paragraphRef}
-          className="mb-16 max-w-2xl text-2xl font-medium leading-snug sm:text-3xl"
+          className="sticky top-24 z-10 max-w-2xl bg-white text-2xl font-medium leading-snug sm:text-3xl"
         >
           {HEADING_WORDS.map((word, i) => (
             <span
@@ -95,7 +105,10 @@ export function TrustSection() {
             </span>
           ))}
         </p>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+        {/* Scroll room the heading pins through — this is what gets
+            "consumed" while the cards rise into view underneath it. */}
+        <div style={{ height: `${PIN_SPACER_VH}vh` }} />
+        <div className="relative grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
           {POINTS.map(({ icon: Icon, title, description }) => (
             <div
               key={title}
