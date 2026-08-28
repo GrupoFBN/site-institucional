@@ -33,10 +33,12 @@ function PartnerSlot({
   items,
   offsetMs,
   originTime,
+  settled,
 }: {
   items: string[];
   offsetMs: number;
   originTime: number;
+  settled: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [animated, setAnimated] = useState(false);
@@ -92,7 +94,9 @@ function PartnerSlot({
           <div
             key={i}
             style={{ height: ITEM_HEIGHT_PX }}
-            className="flex items-center justify-center whitespace-nowrap text-sm font-semibold uppercase tracking-wide text-white/70"
+            className={`flex items-center justify-center whitespace-nowrap text-sm font-semibold uppercase tracking-wide transition-colors duration-300 ${
+              settled ? "text-black" : "text-white/70"
+            }`}
           >
             {name}
           </div>
@@ -110,6 +114,10 @@ export function PartnerLogos() {
 
   const sectionRef = useRef<HTMLElement>(null);
   const [pullUpPx, setPullUpPx] = useState(DEFAULT_PULL_PX);
+  // Once fully settled (off the video, at its normal page position), the
+  // logos switch from light text (readable over the photo) to black
+  // (readable over the page background it lands on).
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -126,6 +134,7 @@ export function PartnerLogos() {
     function updatePullUp() {
       const progress = Math.min(1, window.scrollY / SETTLE_SCROLL_PX);
       setPullUpPx(fullPullUpPx * (1 - progress));
+      setSettled(progress >= 1);
     }
 
     updatePullUp();
@@ -155,6 +164,7 @@ export function PartnerLogos() {
             items={items}
             offsetMs={i * STAGGER_MS}
             originTime={originTime}
+            settled={settled}
           />
         ))}
       </div>
