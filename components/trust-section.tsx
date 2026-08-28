@@ -15,11 +15,12 @@ const HEADING_WORDS = HEADING_TEXT.split(" ");
 const REVEAL_START_VH = 0.85;
 const REVEAL_END_VH = 0.35;
 
-// Placeholder for the real GIFs, until those are ready: the small icon
-// (matches the Adyen reference's resting state) sits in a tall media box;
-// on hover it fades out and an animated shimmer fills the box, standing in
-// for a media file. Swap the shimmer div for a real <img>/<video> per card
-// when the assets land — the box's size/position is already right for that.
+// Placeholder for the real GIFs, until those are ready: at rest each card
+// is a plain gray box with a small icon; on hover the ENTIRE card becomes
+// the media (an animated shimmer filling it edge to edge, standing in for
+// a real GIF/video), with the title/description overlaid in white at the
+// bottom — matching the reference's photo card. Swap the shimmer div for a
+// real <img>/<video> when the assets land.
 const POINTS = [
   {
     icon: Lock,
@@ -98,16 +99,23 @@ export function TrustSection() {
           {POINTS.map(({ icon: Icon, title, description }) => (
             <div
               key={title}
-              className="group rounded-lg bg-gray-50 p-6 transition hover:bg-gray-100"
+              className="group relative h-64 overflow-hidden rounded-lg bg-gray-50 p-6"
             >
-              <div className="relative mb-6 h-44 overflow-hidden rounded-md bg-white">
-                <Icon className="absolute left-4 top-4 h-5 w-5 text-gray-700 transition-opacity duration-300 group-hover:opacity-0" />
-                <div className="absolute inset-0 animate-[shimmer_1.5s_linear_infinite] bg-[linear-gradient(110deg,#f3f4f6,45%,#e5e7eb,55%,#f3f4f6)] bg-[length:200%_100%] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <Icon className="h-5 w-5 text-gray-700 transition-opacity duration-300 group-hover:opacity-0" />
+
+              {/* Placeholder "media" — becomes the whole card on hover */}
+              <div className="absolute inset-0 animate-[shimmer_1.5s_linear_infinite] bg-[linear-gradient(110deg,#f3f4f6,45%,#e5e7eb,55%,#f3f4f6)] bg-[length:200%_100%] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              {/* Dark gradient so the overlaid text stays legible on hover */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <h3 className="mb-1 text-sm font-semibold text-gray-900 transition-colors duration-300 group-hover:text-white">
+                  {title}
+                </h3>
+                <p className="text-sm text-gray-500 transition-colors duration-300 group-hover:text-white/80">
+                  {description}
+                </p>
               </div>
-              <h3 className="mb-2 text-sm font-semibold text-gray-900">
-                {title}
-              </h3>
-              <p className="text-sm text-gray-500">{description}</p>
             </div>
           ))}
         </div>
