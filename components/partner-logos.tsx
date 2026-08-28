@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const PARTNER_GROUPS: string[][] = [
   ["Seguradora 1", "Seguradora 2", "Seguradora 3", "Seguradora 4", "Seguradora 5"],
@@ -16,6 +16,18 @@ const STAGGER_MS = 300;
 const PAUSE_AFTER_LAST_MS = 1000;
 const CYCLE_MS =
   (PARTNER_GROUPS.length - 1) * STAGGER_MS + FLIP_DURATION_MS + PAUSE_AFTER_LAST_MS;
+
+// How much scroll distance it takes to go from "pulled up, overlapping the
+// hero" to "settled at its normal spot on the page". Matches the strip's
+// own height by default (measured on mount) so it starts flush with the
+// hero's bottom edge, but this caps how far you have to scroll before it
+// locks — pure scroll distance, not the strip's height, so a taller strip
+// wouldn't need more scrolling to settle.
+const SETTLE_SCROLL_PX = 220;
+// Fallback used for the very first paint, before the real height is
+// measured — avoids a visible jump once the effect measures the actual
+// element and corrects it (matches this strip's typical rendered height).
+const DEFAULT_PULL_PX = 72;
 
 function PartnerSlot({
   items,
@@ -96,8 +108,46 @@ export function PartnerLogos() {
   // of each position drifting independently.
   const [originTime] = useState(() => performance.now());
 
+  const sectionRef = useRef<HTMLElement>(null);
+  const [pullUpPx, setPullUpPx] = useState(DEFAULT_PULL_PX);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+
+    // Pulled up by its own height, it starts flush with the hero's bottom
+    // edge (looks attached to the video). As the page scrolls, pullUpPx
+    // eases to 0 — a real change to the section's own layout position on
+    // the page, not a viewport-relative "sticky" pin — so once it reaches
+    // 0 it's just sitting at its normal spot in the document, unaffected
+    // by any further scrolling.
+    const fullPullUpPx = el.offsetHeight;
+
+    function updatePullUp() {
+      const progress = Math.min(1, window.scrollY / SETTLE_SCROLL_PX);
+      setPullUpPx(fullPullUpPx * (1 - progress));
+    }
+
+    updatePullUp();
+    // Direct call, no requestAnimationFrame throttling — rAF only fires
+    // while the tab is actively compositing, so a backgrounded/inactive
+    // tab would leave this permanently stuck at its last value. The
+    // handler itself is cheap (one division, one setState), so there's
+    // no real cost to running it on every scroll event.
+    function onScroll() {
+      updatePullUp();
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <div className="relative z-10 px-6 py-6 pointer-events-none sm:px-10">
+    <section
+      ref={sectionRef}
+      style={{ transform: `translateY(-${pullUpPx}px)` }}
+      className="relative z-10 px-6 py-6 pointer-events-none sm:px-10"
+    >
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
         {PARTNER_GROUPS.map((items, i) => (
           <PartnerSlot
@@ -108,6 +158,6 @@ export function PartnerLogos() {
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
