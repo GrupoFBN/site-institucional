@@ -4,7 +4,6 @@ const PARTNERS = [
   "Seguradora C",
   "Seguradora D",
   "Seguradora E",
-  "Seguradora F",
 ];
 
 export function PartnerLogos() {

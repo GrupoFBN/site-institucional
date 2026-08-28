@@ -5,7 +5,7 @@ import { HeroImageRoll } from "@/components/hero-image-roll";
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-[90vh] flex-col overflow-hidden text-white">
+    <section className="relative flex min-h-[90vh] flex-col overflow-hidden text-white md:min-h-screen">
       <HeroImageRoll />
       <div className="relative z-10">
         <Header />
