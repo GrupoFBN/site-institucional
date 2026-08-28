@@ -143,3 +143,12 @@
 .animate-kenburns {
   animation: kenburns 8s ease-out forwards;
 }
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
