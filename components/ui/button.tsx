@@ -1,4 +1,7 @@
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
+import { mergeProps } from "@base-ui/react/merge-props"
+import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -44,8 +47,19 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  asChild = false,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
+  if (asChild) {
+    return (
+      <ButtonSlot
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      />
+    )
+  }
+
   return (
     <ButtonPrimitive
       data-slot="button"
@@ -53,6 +67,36 @@ function Button({
       {...props}
     />
   )
+}
+
+/**
+ * Base UI has no `asChild` prop (it uses `render` instead, see
+ * https://base-ui.com/react/utils/use-render#migrating-from-radix-ui). This
+ * bridges the Radix-style `asChild` API onto Base UI's `useRender` hook so
+ * `<Button asChild><Link ... /></Button>` makes the single child element
+ * (e.g. the `<Link>`'s rendered `<a>`) the actual root node, with Button's
+ * classes merged onto it — matching Radix's `asChild` + `Slot` behavior
+ * exactly, with no extra button semantics (role, keyboard handlers, etc.)
+ * added to the child.
+ */
+function ButtonSlot({
+  className,
+  children,
+  ...props
+}: Omit<ButtonPrimitive.Props, "render" | "className"> & {
+  className?: string
+}) {
+  return useRender({
+    defaultTagName: "button",
+    render: children as React.ReactElement,
+    props: mergeProps<"button">(
+      {
+        "data-slot": "button",
+        className,
+      } as React.ComponentPropsWithRef<"button">,
+      props as React.ComponentPropsWithRef<"button">
+    ),
+  })
 }
 
 export { Button, buttonVariants }
