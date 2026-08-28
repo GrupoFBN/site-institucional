@@ -24,7 +24,7 @@ export function Hero() {
         <Button
           asChild
           size="lg"
-          className="pointer-events-auto mt-2"
+          className="pointer-events-auto mt-2 hover:bg-[color-mix(in_oklch,var(--primary),black_15%)]"
         >
           <Link href="#">Fale com a gente</Link>
         </Button>
