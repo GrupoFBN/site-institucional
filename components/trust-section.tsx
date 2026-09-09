@@ -84,9 +84,33 @@ export function TrustSection() {
     // three reset to their "not pinned yet" state whenever we scroll back
     // above the pin point, and get frozen (stop updating, but stay
     // applied) once PIN_DURATION_PX of scroll has passed since pin start.
-    let frozenHeadingOffsetPx = 0;
-    let frozenCardsOffsetPx = 0;
-    let pinStartScrollY: number | null = null;
+    //
+    // Deliberately never reads a transform back out of a measured rect
+    // (an earlier version did: "current position minus what I applied
+    // last time equals the natural position"). That's a feedback loop —
+    // any tiny mismatch between "what I applied" and "what actually
+    // rendered" (sub-pixel rounding, a layout read racing a not-yet-
+    // settled paint) compounds frame over frame, and it visibly showed up
+    // as the whole pinned block trembling in place. Instead, the two
+    // natural document-flow positions are captured once, only while
+    // nothing is pinned (so the elements carry no transform yet and the
+    // measurement is unambiguous), and reused as pure constants for the
+    // rest of the pin — every offset from then on is plain arithmetic
+    // against `window.scrollY`, nothing ever measured back.
+    let docTopHeading = 0;
+    let docTopCards = 0;
+    let pinStartScrollY = 0;
+    let isPinned = false;
+
+    function applyOffsets(headingOffsetPx: number, cardsOffsetPx: number) {
+      const pEl = paragraphRef.current;
+      const cardsEl = cardsRef.current;
+      if (!pEl || !cardsEl) return;
+      pEl.style.transform =
+        headingOffsetPx === 0 ? "" : `translateY(${headingOffsetPx}px)`;
+      cardsEl.style.transform =
+        cardsOffsetPx === 0 ? "" : `translateY(${cardsOffsetPx}px)`;
+    }
 
     function updatePin() {
       const pEl = paragraphRef.current;
@@ -94,53 +118,53 @@ export function TrustSection() {
       if (!pEl || !cardsEl) return;
 
       if (window.innerWidth < LG_BREAKPOINT_PX) {
-        // No pin effect below lg — everything in plain normal flow.
-        frozenHeadingOffsetPx = 0;
-        frozenCardsOffsetPx = 0;
-        pinStartScrollY = null;
-        pEl.style.transform = "";
-        cardsEl.style.transform = "";
+        isPinned = false;
+        applyOffsets(0, 0);
         return;
       }
 
-      // Back the currently-applied transform out of the measured position
-      // to recover where the heading would be with no transform at all —
-      // its true, ever-decreasing natural scroll position.
-      const headingNaturalTop =
-        pEl.getBoundingClientRect().top - frozenHeadingOffsetPx;
+      if (!isPinned) {
+        // No transform applied right now, so these rects ARE the true
+        // natural positions — keep this refreshed every call up until
+        // the instant pinning starts, so it's accurate even if layout
+        // shifted (fonts loading, content above changing, etc.).
+        docTopHeading = pEl.getBoundingClientRect().top + window.scrollY;
+        docTopCards = cardsEl.getBoundingClientRect().top + window.scrollY;
 
-      if (headingNaturalTop > STICKY_TOP_PX) {
-        // Above the pin point (hasn't reached it yet, or scrolled back up
-        // past it) — no offset on either element.
-        frozenHeadingOffsetPx = 0;
-        frozenCardsOffsetPx = 0;
-        pinStartScrollY = null;
-        pEl.style.transform = "";
-        cardsEl.style.transform = "";
-        return;
-      }
-
-      if (pinStartScrollY === null) {
+        if (docTopHeading - window.scrollY > STICKY_TOP_PX) {
+          applyOffsets(0, 0);
+          return; // still above the pin point
+        }
+        isPinned = true;
         pinStartScrollY = window.scrollY;
       }
 
-      if (window.scrollY <= pinStartScrollY + PIN_DURATION_PX) {
-        // Actively pinning: hold the heading at STICKY_TOP_PX, and the
-        // card row right below it.
-        frozenHeadingOffsetPx = STICKY_TOP_PX - headingNaturalTop;
-        const cardsTargetTop =
-          STICKY_TOP_PX + pEl.offsetHeight + HEADING_CARDS_GAP_PX;
-        const cardsNaturalTop =
-          cardsEl.getBoundingClientRect().top - frozenCardsOffsetPx;
-        frozenCardsOffsetPx = cardsTargetTop - cardsNaturalTop;
+      if (docTopHeading - window.scrollY > STICKY_TOP_PX) {
+        // Scrolled back up above the pin point — release.
+        isPinned = false;
+        applyOffsets(0, 0);
+        return;
       }
-      // Past PIN_DURATION_PX: neither offset is recomputed here, so both
-      // stay at whatever they were on the last pinned frame — applying
-      // the same (now constant) transform below lets both elements
-      // resume scrolling smoothly from exactly where they were held.
 
-      pEl.style.transform = `translateY(${frozenHeadingOffsetPx}px)`;
-      cardsEl.style.transform = `translateY(${frozenCardsOffsetPx}px)`;
+      // Clamping the scrollY used for the offset math (not the real
+      // window.scrollY) to the pin window folds "actively pinning" and
+      // "held past the duration" into one formula: past the end, this
+      // stays fixed at the value it had exactly at the boundary, so both
+      // elements hang there motionless instead of being recomputed every
+      // frame — no separate frozen-value bookkeeping needed.
+      const effectiveScrollY = Math.min(
+        window.scrollY,
+        pinStartScrollY + PIN_DURATION_PX,
+      );
+
+      const headingOffsetPx =
+        STICKY_TOP_PX - (docTopHeading - effectiveScrollY);
+      const cardsTargetTop =
+        STICKY_TOP_PX + pEl.offsetHeight + HEADING_CARDS_GAP_PX;
+      const cardsOffsetPx =
+        cardsTargetTop - (docTopCards - effectiveScrollY);
+
+      applyOffsets(headingOffsetPx, cardsOffsetPx);
     }
 
     updatePin();
