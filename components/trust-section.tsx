@@ -111,7 +111,7 @@ export function TrustSection() {
           heading's bottom edge at the moment of release — no math to
           tune, no invariant to fight. */}
       <div className="mx-auto max-w-5xl">
-        <div className="bg-white lg:sticky lg:top-24 lg:z-10">
+        <div className="bg-white pb-12 lg:sticky lg:top-24 lg:z-10">
           <p
             ref={headingRef}
             className="max-w-2xl text-2xl font-medium leading-snug sm:text-3xl"
@@ -133,7 +133,7 @@ export function TrustSection() {
         <div style={{ height: `${SETTLE_SPACER_VH}vh` }} className="hidden lg:block" />
       </div>
       <div className="mx-auto max-w-5xl">
-        <div className="grid grid-cols-1 gap-6 pt-16 sm:grid-cols-2 lg:grid-cols-5 lg:pt-0">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
           {POINTS.map(({ icon: Icon, title, description }) => (
             <div
               key={title}
