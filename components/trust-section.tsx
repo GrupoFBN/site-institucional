@@ -14,17 +14,11 @@ const HEADING_WORDS = HEADING_TEXT.split(" ");
 const REVEAL_START_VH = 0.85;
 const STICKY_TOP_PX = 96;
 
-// How much scroll room sits after the pinned block, before ServiceCards.
-// A `position: sticky` element releases once its containing block's
-// remaining room drops below the element's own height + top offset — an
-// earlier version had heading and card row as two SEPARATE sticky
-// elements, each with a different height, which could never be made to
-// release at the same scrollY (see git history: that's what caused cards
-// sliding under the heading, then under ServiceCards). Now that heading +
-// card row are one single wrapped block sharing one sticky element, there
-// is only one release calculation, so this number just needs to be
-// generous enough that the block gets a real pinned pause before handing
-// off to ServiceCards — no cross-element sync to get right anymore.
+// How much scroll room sits after the pinned heading, before the card
+// row that follows it. The card row is normal-flow content, not pinned —
+// it doesn't need its own release timing to sync with anything, so this
+// number just needs to be generous enough that the heading gets a real
+// pinned pause before the cards scroll up into view.
 const SETTLE_SPACER_VH = 40;
 
 // Placeholder for the real GIFs, until those are ready: at rest each card
@@ -62,27 +56,21 @@ const POINTS = [
 ];
 
 export function TrustSection() {
-  // Heading + card row are wrapped together and pinned as ONE element via
-  // native CSS `position: sticky`. Three earlier versions tried to
-  // reimplement "stay put while scrolling past" in JS — first as two
-  // separately-sticky elements (their release timing couldn't be
-  // synced), then as JS-computed `transform` following scroll events
-  // (fixed the sync issue, but fighting the browser's own scroll
-  // compositing frame by frame made the block visibly tremble during a
-  // real scroll gesture, even after rAF-throttling the updates — a
-  // symptom this sandbox's screenshot tooling can't feel, but is exactly
-  // what CSS sticky exists to avoid). With everything as one block, the
-  // original reason to avoid CSS sticky (two elements, two different
-  // heights, un-syncable release points) no longer applies: there is
-  // only one sticky element now, so there's nothing left to get out of
-  // sync, and the browser's compositor holds it in place with zero JS
-  // running per scroll frame — the trembling isn't structurally possible.
-  const blockRef = useRef<HTMLDivElement>(null);
+  // Only the heading pins (native CSS `position: sticky`) — the card row
+  // used to be wrapped into the same pinned block, but per feedback the
+  // cards now live where the old "Nossos serviços" section used to be
+  // instead, as plain normal-flow content below the pinned heading. That
+  // also sidesteps entirely the multi-element sync problems earlier
+  // versions had (two sticky elements releasing at different scrollY,
+  // then a JS-transform version that trembled during real scrolling): a
+  // single sticky element with nothing else depending on its exact
+  // release timing has nothing left to get out of sync with.
+  const headingRef = useRef<HTMLParagraphElement>(null);
   const [revealedCount, setRevealedCount] = useState(0);
 
   useEffect(() => {
     function updateReveal() {
-      const el = blockRef.current;
+      const el = headingRef.current;
       // Guards against a zero-height viewport (an unsized/hidden iframe,
       // a devtools/embed edge case) — without it, start===end===0 makes
       // the progress division 0/0 (NaN), and every word would silently
@@ -104,12 +92,30 @@ export function TrustSection() {
 
   return (
     <section className="relative px-6 py-16 sm:px-10">
+      {/* Own containing block, holding ONLY the heading + its spacer — a
+          `position: sticky` element releases once there's no more room
+          left in ITS OWN containing block, so anything sharing that same
+          block factors into that release math. Cards used to be a
+          sibling right here, inside this same wrapper: they factored
+          into the release calculation and, provably, always ended up
+          overlapping the pinned heading right at the release boundary
+          regardless of how large the spacer was (the math: at release,
+          a same-containing-block sibling's screen position works out to
+          `headingHeight + STICKY_TOP_PX - siblingHeight`, which is above
+          the heading's own bottom edge — i.e. overlapping — for any
+          sibling taller than headingHeight + STICKY_TOP_PX). Giving the
+          card row its own separate containing block below (a plain
+          sibling `<div>`, not nested inside this one) removes it from
+          that equation entirely: it just starts wherever normal document
+          flow puts it, which works out to exactly flush with the
+          heading's bottom edge at the moment of release — no math to
+          tune, no invariant to fight. */}
       <div className="mx-auto max-w-5xl">
-        <div
-          ref={blockRef}
-          className="bg-white lg:sticky lg:top-24 lg:z-10"
-        >
-          <p className="mb-16 max-w-2xl text-2xl font-medium leading-snug sm:text-3xl lg:mb-8">
+        <div className="bg-white lg:sticky lg:top-24 lg:z-10">
+          <p
+            ref={headingRef}
+            className="max-w-2xl text-2xl font-medium leading-snug sm:text-3xl"
+          >
             {HEADING_WORDS.map((word, i) => (
               <span
                 key={i}
@@ -121,37 +127,36 @@ export function TrustSection() {
               </span>
             ))}
           </p>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-            {POINTS.map(({ icon: Icon, title, description }) => (
-              <div
-                key={title}
-                className="group relative h-64 overflow-hidden rounded-lg bg-gray-50 p-6"
-              >
-                <Icon className="h-5 w-5 text-gray-700 transition-opacity duration-300 group-hover:opacity-0" />
-
-                {/* Placeholder "media" — becomes the whole card on hover */}
-                <div className="absolute inset-0 animate-[shimmer_1.5s_linear_infinite] bg-[linear-gradient(110deg,#f3f4f6,45%,#e5e7eb,55%,#f3f4f6)] bg-[length:200%_100%] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                {/* Dark gradient so the overlaid text stays legible on hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-                <div className="absolute inset-x-0 bottom-0 p-6">
-                  <h3 className="mb-1 text-sm font-semibold text-gray-900 transition-colors duration-300 group-hover:text-white">
-                    {title}
-                  </h3>
-                  <p className="text-sm text-gray-500 transition-colors duration-300 group-hover:text-white/80">
-                    {description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
-        {/* Scroll room after the pinned block, before ServiceCards — see
-            SETTLE_SPACER_VH above. */}
-        <div
-          className="hidden lg:block"
-          style={{ height: `${SETTLE_SPACER_VH}vh` }}
-        />
+        {/* Scroll room after the pinned heading, before the card row —
+            see SETTLE_SPACER_VH above. */}
+        <div style={{ height: `${SETTLE_SPACER_VH}vh` }} className="hidden lg:block" />
+      </div>
+      <div className="mx-auto max-w-5xl">
+        <div className="grid grid-cols-1 gap-6 pt-16 sm:grid-cols-2 lg:grid-cols-5 lg:pt-0">
+          {POINTS.map(({ icon: Icon, title, description }) => (
+            <div
+              key={title}
+              className="group relative h-64 overflow-hidden rounded-lg bg-gray-50 p-6"
+            >
+              <Icon className="h-5 w-5 text-gray-700 transition-opacity duration-300 group-hover:opacity-0" />
+
+              {/* Placeholder "media" — becomes the whole card on hover */}
+              <div className="absolute inset-0 animate-[shimmer_1.5s_linear_infinite] bg-[linear-gradient(110deg,#f3f4f6,45%,#e5e7eb,55%,#f3f4f6)] bg-[length:200%_100%] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              {/* Dark gradient so the overlaid text stays legible on hover */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <h3 className="mb-1 text-sm font-semibold text-gray-900 transition-colors duration-300 group-hover:text-white">
+                  {title}
+                </h3>
+                <p className="text-sm text-gray-500 transition-colors duration-300 group-hover:text-white/80">
+                  {description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
