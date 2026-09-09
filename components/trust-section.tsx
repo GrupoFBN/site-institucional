@@ -9,45 +9,35 @@ const HEADING_WORDS = HEADING_TEXT.split(" ");
 
 // Reveal starts once the paragraph is 85% down the screen (just entering
 // from the bottom). It ends exactly at STICKY_TOP_PX — the same offset the
-// paragraph goes `sticky` at — so the text finishes painting dark right as
-// it locks into place.
+// heading pins at — so the text finishes painting dark right as it locks
+// into place.
 const REVEAL_START_VH = 0.85;
-const STICKY_TOP_PX = 96; // matches the `top-24` class below
-// Gap between the pinned heading's bottom edge and the pinned card row's
-// top edge, once both are held on screen together.
-//
-// Cards are NOT CSS `sticky` — that was tried and measurably doesn't work
-// for this pair. A sticky element releases once its OWN containing
-// block's remaining room (below current scroll) drops below its OWN
-// height + top offset. The heading's release depends on the room *after*
-// it (gap + card row + spacer); the card row's release only has the
-// spacer after it — strictly less room, so by that formula the (taller)
-// card row was provably guaranteed to release before the heading, no
-// matter how large the spacer got (verified live: at 60vh spacer the
-// heading held until scrollY≈1700 while the cards row let go by
-// scrollY≈1400, sliding back through/under the still-pinned heading
-// during the gap). Two independent CSS sticky elements can't be forced
-// to release in lockstep when one is taller than the other by more than
-// the shared trailing space allows.
-//
-// Instead, the heading alone stays CSS `sticky` (that part is simple and
-// already correct), and the card row is normal-flow with a JS-computed
-// `transform: translateY()` that cancels its natural scroll motion for
-// exactly as long as the heading is pinned (detected by reading the
-// heading's own rendered `top`, not by re-deriving the release math
-// independently) — see the effect below.
-// (Includes ~15px of margin absorbing a small, constant gap-narrowing
-// measured live during the release transition — the instant the heading's
-// CSS sticky lets go, the two are no longer both driven by the identical
-// mechanism for one frame, so the gap isn't pixel-perfect right at that
-// boundary. 32px alone measured as an actual, if brief, overlap there.)
-const HEADING_CARDS_GAP_PX = 48;
-
-// Extra scroll room after the card row, so the pinned pair — heading +
-// cards — stays on screen for a beat before releasing into the next
-// section, instead of releasing the instant the cards arrive.
-const SETTLE_SPACER_VH = 40;
+const STICKY_TOP_PX = 96;
+const HEADING_CARDS_GAP_PX = 32;
 const LG_BREAKPOINT_PX = 1024;
+
+// Exact scroll distance (in px) the pin lasts, once the heading reaches
+// STICKY_TOP_PX. This used to be governed by CSS `position: sticky`'s own
+// release math on both the heading and the card row — which turned out to
+// be impossible to keep in sync (see git history): each sticky element's
+// release point depends on its own height plus whatever content trails it,
+// so two independently-sized sticky elements drift apart, and so does a
+// third: the section *after* this one (ServiceCards) is plain document
+// flow, keeps scrolling at 1:1 with the page throughout, and was measured
+// catching up to and sliding underneath the pinned card row once the pin
+// lasted long enough.
+//
+// Both problems have the same fix: don't let anything's "how long is this
+// held" be an emergent property of CSS layout math. Pin the heading AND
+// the card row with the same explicit JS-computed duration, and give the
+// spacer *after* the card row that exact same duration in px (not a vh
+// guess) — so the next section's natural document position, at the exact
+// moment the pin ends, lines up flush with the card row's held position.
+// (Algebraically: the spacer's contribution to "how far the next section
+// has to travel" and the pin's own duration cancel out, as long as they're
+// the literal same number — see PIN_SPACER_PX below.)
+const PIN_DURATION_PX = 600;
+const PIN_SPACER_PX = PIN_DURATION_PX;
 
 // Placeholder for the real GIFs, until those are ready: at rest each card
 // is a plain gray box with a small icon; on hover the ENTIRE card becomes
@@ -89,13 +79,14 @@ export function TrustSection() {
   const [revealedCount, setRevealedCount] = useState(0);
 
   useEffect(() => {
-    // Holds the card row's screen position steady for exactly as long as
-    // the heading is pinned. `frozenOffsetPx` is the translateY currently
-    // applied: 0 before the heading ever pins, recomputed every frame
-    // while it's pinned (canceling the row's natural scroll motion), and
-    // then held constant once the heading releases — so the row resumes
-    // scrolling smoothly from wherever it was, with no jump.
-    let frozenOffsetPx = 0;
+    // Both elements' held offsets, plus the scrollY at which the pin
+    // started (null until the heading first reaches STICKY_TOP_PX). All
+    // three reset to their "not pinned yet" state whenever we scroll back
+    // above the pin point, and get frozen (stop updating, but stay
+    // applied) once PIN_DURATION_PX of scroll has passed since pin start.
+    let frozenHeadingOffsetPx = 0;
+    let frozenCardsOffsetPx = 0;
+    let pinStartScrollY: number | null = null;
 
     function updatePin() {
       const pEl = paragraphRef.current;
@@ -103,48 +94,60 @@ export function TrustSection() {
       if (!pEl || !cardsEl) return;
 
       if (window.innerWidth < LG_BREAKPOINT_PX) {
-        // Below lg the heading isn't `sticky` at all (see its className) —
-        // cards stay in plain normal flow.
-        frozenOffsetPx = 0;
+        // No pin effect below lg — everything in plain normal flow.
+        frozenHeadingOffsetPx = 0;
+        frozenCardsOffsetPx = 0;
+        pinStartScrollY = null;
+        pEl.style.transform = "";
         cardsEl.style.transform = "";
         return;
       }
 
-      const pTop = pEl.getBoundingClientRect().top;
+      // Back the currently-applied transform out of the measured position
+      // to recover where the heading would be with no transform at all —
+      // its true, ever-decreasing natural scroll position.
+      const headingNaturalTop =
+        pEl.getBoundingClientRect().top - frozenHeadingOffsetPx;
 
-      if (Math.abs(pTop - STICKY_TOP_PX) < 1) {
-        // Pinned right now. Back last frame's offset out of the row's
-        // current measured position to recover where it'd be with no
-        // transform at all, then compute the new offset needed to hold
-        // it at the target. Measures the heading's height fresh here
-        // (not via ResizeObserver — that never fired at all in testing,
-        // apparently gated behind active compositing the same way
-        // requestAnimationFrame was elsewhere in this file; reading it
-        // inside this handler ties it to the same scroll/resize events
-        // already proven to fire reliably).
+      if (headingNaturalTop > STICKY_TOP_PX) {
+        // Above the pin point (hasn't reached it yet, or scrolled back up
+        // past it) — no offset on either element.
+        frozenHeadingOffsetPx = 0;
+        frozenCardsOffsetPx = 0;
+        pinStartScrollY = null;
+        pEl.style.transform = "";
+        cardsEl.style.transform = "";
+        return;
+      }
+
+      if (pinStartScrollY === null) {
+        pinStartScrollY = window.scrollY;
+      }
+
+      if (window.scrollY <= pinStartScrollY + PIN_DURATION_PX) {
+        // Actively pinning: hold the heading at STICKY_TOP_PX, and the
+        // card row right below it.
+        frozenHeadingOffsetPx = STICKY_TOP_PX - headingNaturalTop;
         const cardsTargetTop =
           STICKY_TOP_PX + pEl.offsetHeight + HEADING_CARDS_GAP_PX;
-        const naturalScreenTop =
-          cardsEl.getBoundingClientRect().top - frozenOffsetPx;
-        frozenOffsetPx = cardsTargetTop - naturalScreenTop;
-        cardsEl.style.transform = `translateY(${frozenOffsetPx}px)`;
-      } else if (pTop > STICKY_TOP_PX) {
-        // Genuinely hasn't reached the pin point yet (or scrolled back
-        // above it) — no offset.
-        frozenOffsetPx = 0;
-        cardsEl.style.transform = "";
-      } else {
-        // pTop < STICKY_TOP_PX: the heading has released and is
-        // scrolling away. Keep the last offset constant so the row
-        // continues from exactly where it was held, not a fresh 0.
-        cardsEl.style.transform = `translateY(${frozenOffsetPx}px)`;
+        const cardsNaturalTop =
+          cardsEl.getBoundingClientRect().top - frozenCardsOffsetPx;
+        frozenCardsOffsetPx = cardsTargetTop - cardsNaturalTop;
       }
+      // Past PIN_DURATION_PX: neither offset is recomputed here, so both
+      // stay at whatever they were on the last pinned frame — applying
+      // the same (now constant) transform below lets both elements
+      // resume scrolling smoothly from exactly where they were held.
+
+      pEl.style.transform = `translateY(${frozenHeadingOffsetPx}px)`;
+      cardsEl.style.transform = `translateY(${frozenCardsOffsetPx}px)`;
     }
 
     updatePin();
-    // Direct calls, no requestAnimationFrame — same reasoning as the
-    // word-reveal effect below: rAF only fires while the tab is actively
-    // compositing.
+    // Direct calls, no requestAnimationFrame — rAF only fires while the
+    // tab is actively compositing (confirmed missing entirely in this
+    // project's dev/test environment), so a backgrounded tab would leave
+    // this stuck.
     window.addEventListener("scroll", updatePin, { passive: true });
     window.addEventListener("resize", updatePin);
     return () => {
@@ -154,10 +157,6 @@ export function TrustSection() {
   }, []);
 
   useEffect(() => {
-    // Direct call on every scroll event, no requestAnimationFrame — rAF
-    // only fires while the tab is actively compositing, so a backgrounded
-    // tab would leave this stuck (same class of bug already hit and fixed
-    // in the partner-logos scroll effect).
     function updateReveal() {
       const el = paragraphRef.current;
       // Guards against a zero-height viewport (an unsized/hidden iframe,
@@ -184,7 +183,7 @@ export function TrustSection() {
       <div className="mx-auto max-w-5xl">
         <p
           ref={paragraphRef}
-          className="mb-16 max-w-2xl bg-white text-2xl font-medium leading-snug sm:text-3xl lg:sticky lg:top-24 lg:z-10 lg:mb-8"
+          className="mb-16 max-w-2xl bg-white text-2xl font-medium leading-snug sm:text-3xl lg:z-10 lg:mb-8"
         >
           {HEADING_WORDS.map((word, i) => (
             <span
@@ -224,12 +223,11 @@ export function TrustSection() {
             </div>
           ))}
         </div>
-        {/* Keeps the pinned heading+cards pair on screen for a beat before
-            releasing into the next section — see SETTLE_SPACER_VH above. */}
-        <div
-          className="hidden lg:block"
-          style={{ height: `${SETTLE_SPACER_VH}vh` }}
-        />
+        {/* Exactly PIN_DURATION_PX tall — see the comment on that constant
+            for why this has to be the literal same number, not a vh
+            guess, to line up with ServiceCards right after the pin
+            releases. */}
+        <div className="hidden lg:block" style={{ height: PIN_SPACER_PX }} />
       </div>
     </section>
   );
