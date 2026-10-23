@@ -1,0 +1,8 @@
+# Next static export writes these without a file extension, so Apache/LiteSpeed
+# can't infer the content type. Needed for link previews (OG image) and the PWA manifest.
+<Files "opengraph-image">
+  ForceType image/png
+</Files>
+<Files "manifest.webmanifest">
+  ForceType application/manifest+json
+</Files>

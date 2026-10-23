@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Blog data written by the admin panel and its snapshot (large, changes constantly)
+/content/
+/public/uploads/
+!.env.example
+
+# local AI/tooling state
+/.claude/
+/.claude-flow/
+/.impeccable/
+/.playwright-mcp/
+/.superpowers/

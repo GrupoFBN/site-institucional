@@ -1,29 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
-const PARTNER_GROUPS: string[][] = [
-  ["Seguradora 1", "Seguradora 2", "Seguradora 3", "Seguradora 4", "Seguradora 5"],
-  ["Seguradora 6", "Seguradora 7", "Seguradora 8", "Seguradora 9", "Seguradora 10"],
-  ["Seguradora 11", "Seguradora 12", "Seguradora 13", "Seguradora 14", "Seguradora 15"],
-  ["Seguradora 16", "Seguradora 17", "Seguradora 18", "Seguradora 19", "Seguradora 20"],
-  ["Seguradora 21", "Seguradora 22", "Seguradora 23", "Seguradora 24", "Seguradora 25"],
+// Real client companies named in grupofbn.com.br's own testimonials
+// section (confirmed live, 2026-10-01) — the only named clients that site
+// publishes. "Dra. Fernanda / Médica" from that same section is a person,
+// not a company, so she isn't included here.
+export const PARTNER_GROUPS: string[][] = [
+  ["Sorridents", "Além do Olhar"],
+  ["GiO", "Hurst"],
+  ["Buddha Spa", "Solargoup"],
+  ["Nordex", "Dupps"],
+  ["Liga Ventures"],
 ];
 
 const ITEM_HEIGHT_PX = 24;
-// Fixed per-position width, wide enough for the longest name ("Seguradora
-// 25") at this text size. Without this, each position's width shrinks to
-// fit whatever name is currently showing — and since names have different
-// digit counts (1-9 vs 10-25), the row's total width changes tick to tick.
-// Right at the flex-wrap breakpoint, that was enough to sometimes overflow
-// and wrap 1-2 positions onto a clipped second line, making them appear to
-// randomly vanish.
-const ITEM_WIDTH_PX = 132;
+// Fixed per-position width, wide enough for the longest name ("Liga
+// Ventures") at this text size. Without this, each position's width
+// shrinks to fit whatever name is currently showing, and since the names
+// have different lengths, the row's total width would change tick to
+// tick. Right at the flex-wrap breakpoint, that was enough to sometimes
+// overflow and wrap 1-2 positions onto a clipped second line, making them
+// appear to randomly vanish.
+const ITEM_WIDTH_PX = 160;
 const FLIP_DURATION_MS = 600;
 const STAGGER_MS = 300;
 const PAUSE_AFTER_LAST_MS = 1000;
-const CYCLE_MS =
-  (PARTNER_GROUPS.length - 1) * STAGGER_MS + FLIP_DURATION_MS + PAUSE_AFTER_LAST_MS;
+// One full flip cycle for a ticker with this many slots.
+const cycleFor = (slots: number) => (slots - 1) * STAGGER_MS + FLIP_DURATION_MS + PAUSE_AFTER_LAST_MS;
 
 // How much scroll distance it takes to go from "pulled up, overlapping the
 // hero" to "settled at its normal spot on the page". Matches the strip's
@@ -32,6 +37,15 @@ const CYCLE_MS =
 // locks — pure scroll distance, not the strip's height, so a taller strip
 // wouldn't need more scrolling to settle.
 const SETTLE_SCROLL_PX = 220;
+// Below this width the hero's heading/subtitle wrap onto enough extra
+// lines that its centered content sits much closer to the hero's own
+// bottom edge than on desktop, with no headroom left for the strip's
+// "pulled up, overlapping the hero" illusion — it was landing directly on
+// top of the CTA button instead of the empty background below it. The
+// trick is purely decorative (`aria-hidden`), so below this width it's
+// simply skipped: the strip starts already settled at its normal
+// document position instead of risking the overlap.
+const NARROW_VIEWPORT_PX = 1024;
 // Extra gap between the hero and where the strip finally locks, so it
 // settles a bit below the hero's edge instead of landing flush against it.
 // The starting (pulled-up, over-the-video) position is unaffected — see
@@ -47,17 +61,36 @@ function PartnerSlot({
   offsetMs,
   originTime,
   settled,
+  cycleMs,
+  logos,
+  flatLogos,
+  itemHeight,
+  logoScale,
 }: {
   items: string[];
   offsetMs: number;
   originTime: number;
   settled: boolean;
+  cycleMs: number;
+  logos?: Record<string, string>;
+  flatLogos?: Record<string, string>;
+  // Any CSS length (numbers are px).
+  itemHeight: number | string;
+  logoScale?: Record<string, number>;
 }) {
+  const rowHeight = typeof itemHeight === "number" ? `${itemHeight}px` : itemHeight;
   const [index, setIndex] = useState(0);
   const [animated, setAnimated] = useState(false);
   const displayItems = [...items, items[0]];
 
   useEffect(() => {
+    // WCAG 2.2.2 (Pause, Stop, Hide): this ticker has no pause control, so
+    // honor the OS-level motion preference instead — skip scheduling
+    // entirely and let the slot render its first item statically.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
     let tickTimeout: ReturnType<typeof setTimeout>;
     let resetTimeout: ReturnType<typeof setTimeout>;
     // Only the very first call (mount) may target k=0 — a reschedule after
@@ -80,8 +113,8 @@ function PartnerSlot({
       const cyclesElapsed =
         sinceFirstFire < 0
           ? 0
-          : Math.floor(sinceFirstFire / CYCLE_MS) + (hasFiredOnce ? 1 : 0);
-      const nextFireAt = originTime + offsetMs + cyclesElapsed * CYCLE_MS;
+          : Math.floor(sinceFirstFire / cycleMs) + (hasFiredOnce ? 1 : 0);
+      const nextFireAt = originTime + offsetMs + cyclesElapsed * cycleMs;
 
       tickTimeout = setTimeout(() => {
         hasFiredOnce = true;
@@ -114,12 +147,12 @@ function PartnerSlot({
       clearTimeout(tickTimeout);
       clearTimeout(resetTimeout);
     };
-  }, [offsetMs, originTime, items.length]);
+  }, [offsetMs, originTime, items.length, cycleMs]);
 
   return (
     <div
       className="overflow-hidden"
-      style={{ height: ITEM_HEIGHT_PX, width: ITEM_WIDTH_PX }}
+      style={{ height: rowHeight, width: logos ? `calc(${rowHeight} * 4 / 3)` : ITEM_WIDTH_PX }}
     >
       <div
         style={{
@@ -128,29 +161,89 @@ function PartnerSlot({
           // scroll past the last stacked name into empty space instead of
           // erroring — clamping keeps that a visual no-op rather than a
           // blank position.
-          transform: `translateY(-${Math.min(index, items.length) * ITEM_HEIGHT_PX}px)`,
+          transform: `translateY(calc(${rowHeight} * -${Math.min(index, items.length)}))`,
           transitionProperty: "transform",
           transitionDuration: animated ? `${FLIP_DURATION_MS}ms` : "0ms",
           transitionTimingFunction: "ease-in-out",
         }}
       >
-        {displayItems.map((name, i) => (
-          <div
-            key={i}
-            style={{ height: ITEM_HEIGHT_PX }}
-            className={`flex items-center justify-center whitespace-nowrap text-sm font-semibold uppercase tracking-wide transition-colors duration-300 ${
-              settled ? "text-black" : "text-white/70"
-            }`}
-          >
-            {name}
-          </div>
-        ))}
+        {displayItems.map((name, i) =>
+          logos?.[name] ? (
+            // Logo mode: over the hero photo every logo is flattened to
+            // white; once the strip settles on the page they get their own
+            // colors back.
+            <div key={i} style={{ height: rowHeight }} className="flex items-center justify-center">
+              <div
+                className="relative"
+                style={{ height: rowHeight, width: rowHeight, transform: `scale(${logoScale?.[name] ?? 1})` }}
+              >
+                {/* Some marks have white parts (a smile) that would fill in
+                    solid once flattened to white. Those get a second file
+                    with the white cut out, shown over the hero; the original
+                    takes over when the strip settles. */}
+                {flatLogos?.[name] && (
+                  <Image
+                    src={flatLogos[name]}
+                    alt=""
+                    width={160}
+                    height={160}
+                    loading="eager"
+                    className={`absolute inset-0 h-full w-full object-contain transition duration-300 ${
+                      settled ? "opacity-0" : "opacity-80 brightness-0 invert"
+                    }`}
+                  />
+                )}
+                <Image
+                  src={logos[name]}
+                  alt=""
+                  width={160}
+                  height={160}
+                  // The slot clips everything below its current logo, so lazy
+                  // loading would never fetch the next ones and each flip would
+                  // land on an empty space.
+                  loading="eager"
+                  className={`h-full w-full object-contain transition duration-300 ${
+                    flatLogos?.[name] ? "absolute inset-0" : ""
+                  } ${settled ? "opacity-100" : flatLogos?.[name] ? "opacity-0" : "opacity-80 brightness-0 invert"}`}
+                />
+              </div>
+            </div>
+          ) : (
+            <div
+              key={i}
+              style={{ height: rowHeight }}
+              className={`flex items-center justify-center whitespace-nowrap text-sm font-semibold uppercase tracking-wide transition-colors duration-300 ${
+                settled ? "text-black" : "text-white/70"
+              }`}
+            >
+              {name}
+            </div>
+          ),
+        )}
       </div>
     </div>
   );
 }
 
-export function PartnerLogos() {
+// `groups` defaults to the home page's clients; the Franquia Protegida page
+// passes its own. With `logos` (name -> image URL) a slot shows the logo
+// instead of the name, at `itemHeight` px tall.
+export function PartnerLogos({
+  groups = PARTNER_GROUPS,
+  logos,
+  itemHeight = ITEM_HEIGHT_PX,
+  logoScale,
+  flatLogos,
+}: {
+  groups?: string[][];
+  logos?: Record<string, string>;
+  // Alternate files used while the logos are flattened to white over the hero.
+  flatLogos?: Record<string, string>;
+  itemHeight?: number | string;
+  // Per-logo size correction (1 = as is). Logo files carry very different
+  // amounts of empty margin, so equal boxes make some marks look tiny.
+  logoScale?: Record<string, number>;
+}) {
   // Shared clock origin — all 5 positions schedule their ticks relative to
   // this single timestamp so their stagger stays exact over time, instead
   // of each position drifting independently.
@@ -173,9 +266,15 @@ export function PartnerLogos() {
     // the page, not a viewport-relative "sticky" pin — so once it reaches
     // 0 it's just sitting at its normal spot in the document, unaffected
     // by any further scrolling.
-    const fullPullUpPx = el.offsetHeight + SETTLE_GAP_PX;
-
     function updatePullUp() {
+      // Measured on every update: with fluid logo sizes the strip's height
+      // changes with the window.
+      const fullPullUpPx = (el as HTMLElement).offsetHeight + SETTLE_GAP_PX;
+      if (window.innerWidth < NARROW_VIEWPORT_PX) {
+        setPullUpPx(0);
+        setSettled(true);
+        return;
+      }
       const progress = Math.min(1, window.scrollY / SETTLE_SCROLL_PX);
       setPullUpPx(fullPullUpPx * (1 - progress));
       setSettled(progress >= 1);
@@ -192,26 +291,36 @@ export function PartnerLogos() {
     }
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener("resize", updatePullUp, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", updatePullUp);
+    };
   }, []);
 
   return (
     <section
       ref={sectionRef}
+      aria-hidden="true"
       style={{
         transform: `translateY(-${pullUpPx}px)`,
         marginTop: SETTLE_GAP_PX,
       }}
       className="relative z-10 px-6 py-6 pointer-events-none sm:px-10"
     >
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
-        {PARTNER_GROUPS.map((items, i) => (
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
+        {groups.map((items, i) => (
           <PartnerSlot
             key={i}
             items={items}
             offsetMs={i * STAGGER_MS}
             originTime={originTime}
             settled={settled}
+            cycleMs={cycleFor(groups.length)}
+            logos={logos}
+            flatLogos={flatLogos}
+            itemHeight={itemHeight}
+            logoScale={logoScale}
           />
         ))}
       </div>

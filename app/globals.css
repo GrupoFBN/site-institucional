@@ -8,7 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --font-mono: var(--font-inter);
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -85,40 +85,6 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -144,11 +110,515 @@
   animation: kenburns 8s ease-out forwards;
 }
 
+/* A smaller blur radius/offset than the original (was 0 10px 8px) — the
+   audit flagged this as 22 states animating `filter: drop-shadow`
+   simultaneously and in sync, which is one of the more expensive CSS
+   properties to repaint (unlike transform/opacity, it isn't cheaply
+   GPU-composited). Blur cost scales with radius, so shrinking it is the
+   direct lever; the pulse keeps the same rise+brighten read, just with a
+   tighter, cheaper shadow instead of a soft wide one. */
+@keyframes state-pulse {
+  0%,
+  100% {
+    fill-opacity: 0.12;
+    stroke-opacity: 0.55;
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    fill-opacity: 0.55;
+    stroke-opacity: 1;
+    transform: translateY(-10px) scale(1.03);
+    filter: drop-shadow(0 4px 3px rgb(0 0 0 / 0.45));
+  }
+}
+
+/* Film-grain overlay for the hero: a tiled SVG feTurbulence noise texture,
+   blended over the image with a subtle position jitter so it reads as
+   actual grain rather than a static dirty-lens texture. */
+.film-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 1;
+  animation: grain-jitter 400ms steps(4) infinite;
+}
+
+@keyframes grain-jitter {
+  0% {
+    background-position: 0% 0%;
+  }
+  25% {
+    background-position: -15% 10%;
+  }
+  50% {
+    background-position: 10% -10%;
+  }
+  75% {
+    background-position: -10% -15%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
 @keyframes shimmer {
   from {
     background-position: 200% 0;
   }
   to {
     background-position: -200% 0;
+  }
+}
+
+/* WCAG 2.2.2 (Pause, Stop, Hide): none of the continuous animations above
+   have a UI pause control, so honor the OS-level motion preference instead
+   — freeze every looping effect at a single resting frame rather than
+   leaving them running for motion-sensitive users. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-kenburns,
+  .film-grain,
+  [style*="state-pulse"] {
+    animation: none !important;
+  }
+}
+
+/* Header bar <-> pill swap (header.tsx, document.startViewTransition).
+   The page itself must NOT crossfade — it's mid-scroll, and the default
+   root crossfade would freeze/ghost it — so root snapshots are dropped
+   and the live new state shows through. Only the two named pieces move:
+   the logo slides between its bar and pill positions, and the white
+   surface contracts/expands between full-width bar and pill. Snapshots
+   are pinned top-left at their real size and clipped by the moving box
+   (not stretched to fit it, the default), so the bar reads as folding in
+   from the right instead of its nav and icons squashing. */
+::view-transition-old(root) {
+  display: none;
+}
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(site-bar),
+::view-transition-group(site-logo) {
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-image-pair(site-bar) {
+  overflow: clip;
+  border-radius: 0.5rem;
+}
+::view-transition-old(site-bar),
+::view-transition-new(site-bar) {
+  animation-duration: 450ms;
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+
+/* Article body. The HTML comes from WordPress (headings, lists, tables,
+   figures — block-editor classes are stripped in lib/blog.ts), so it's
+   styled by element instead of by class. */
+.blog-prose {
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: oklch(0.37 0.02 260);
+}
+.blog-prose > * + * {
+  margin-top: 1.5rem;
+}
+.blog-prose h2 {
+  margin-top: 3rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--brand-dark);
+  text-wrap: balance;
+}
+.blog-prose h3 {
+  margin-top: 2.25rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--brand-dark);
+  text-wrap: balance;
+}
+.blog-prose h2 + *,
+.blog-prose h3 + * {
+  margin-top: 1rem;
+}
+.blog-prose strong {
+  font-weight: 600;
+  color: var(--brand-dark);
+}
+.blog-prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.blog-prose a:hover {
+  text-decoration-thickness: 2px;
+}
+.blog-prose ul,
+.blog-prose ol {
+  padding-left: 1.5rem;
+}
+.blog-prose ul {
+  list-style: disc;
+}
+.blog-prose ol {
+  list-style: decimal;
+}
+.blog-prose li + li {
+  margin-top: 0.5rem;
+}
+.blog-prose li::marker {
+  color: var(--primary);
+}
+.blog-prose hr {
+  border: 0;
+  border-top: 1px solid oklch(0.922 0 0);
+  margin-block: 3rem;
+}
+.blog-prose img {
+  height: auto;
+  max-width: 100%;
+  border-radius: 0.625rem;
+}
+.blog-prose figure {
+  margin-block: 2rem;
+}
+.blog-prose figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: oklch(0.556 0 0);
+}
+.blog-prose blockquote {
+  padding: 1.5rem 1.75rem;
+  border-radius: 0.625rem;
+  background: oklch(0.97 0 0);
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: var(--brand-dark);
+}
+/* Wide tables scroll inside themselves instead of the whole page. */
+.blog-prose table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+.blog-prose th,
+.blog-prose td {
+  border-bottom: 1px solid oklch(0.922 0 0);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  vertical-align: top;
+}
+.blog-prose th {
+  font-weight: 600;
+  color: var(--brand-dark);
+  white-space: nowrap;
+}
+
+/* CTA blocks inside articles (markup comes from lib/cta.ts). Shared by the
+   public article and the editor preview, so both look the same. Selectors
+   are doubled with .blog-prose where the prose defaults (link colour,
+   spacing) would otherwise win. */
+.blog-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-block: 2.5rem;
+  padding: 2rem;
+  border-radius: 0.625rem;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+.blog-cta__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.blog-cta__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  color: var(--brand-dark);
+}
+.blog-cta__text {
+  margin: 0;
+  max-width: 34rem;
+  color: oklch(0.45 0.02 260);
+}
+.blog-cta__button,
+.blog-prose .blog-cta__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 3rem;
+  margin-top: 0.5rem;
+  padding-inline: 1.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+.blog-cta__button:hover,
+.blog-prose .blog-cta__button:hover {
+  background: color-mix(in oklch, var(--primary), black 15%);
+  text-decoration: none;
+}
+.blog-cta__button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.blog-cta__button:focus-visible,
+.blog-cta__link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+/* Caixa */
+.blog-cta--box {
+  background: oklch(0.97 0 0);
+}
+
+/* Destaque: dark band, image optional on the right */
+.blog-cta--banner {
+  background: var(--brand-dark);
+  color: #fff;
+}
+.blog-cta--banner .blog-cta__title {
+  color: #fff;
+  font-size: 1.75rem;
+}
+.blog-cta--banner .blog-cta__text {
+  color: oklch(1 0 0 / 0.78);
+}
+.blog-cta--banner .blog-cta__button,
+.blog-prose .blog-cta--banner .blog-cta__button {
+  background: #fff;
+  color: var(--brand-dark);
+}
+.blog-cta--banner .blog-cta__button:hover,
+.blog-prose .blog-cta--banner .blog-cta__button:hover {
+  background: oklch(0.93 0 0);
+}
+
+/* Imagem ao lado */
+.blog-cta--image {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid oklch(0.922 0 0);
+  background: #fff;
+}
+.blog-cta--image .blog-cta__body {
+  padding: 2rem;
+}
+.blog-cta__image,
+.blog-prose .blog-cta__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  border-radius: 0;
+  object-fit: cover;
+}
+@media (min-width: 40rem) {
+  .blog-cta--banner.has-image {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: stretch;
+    padding: 0;
+    overflow: hidden;
+  }
+  .blog-cta--banner.has-image .blog-cta__body {
+    justify-content: center;
+    padding: 2rem;
+  }
+  .blog-cta--image.has-image {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    align-items: stretch;
+  }
+  .blog-cta--image .blog-cta__body {
+    justify-content: center;
+  }
+}
+
+/* Linha: a quiet sentence with a link, no box */
+.blog-cta--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  margin-block: 2rem;
+  padding: 1rem 0;
+  border-radius: 0;
+  border-block: 1px solid oklch(0.922 0 0);
+}
+.blog-cta--inline .blog-cta__title {
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+.blog-cta__link,
+.blog-prose .blog-cta__link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.blog-cta__link::after {
+  content: " →";
+}
+.blog-cta__link:hover,
+.blog-prose .blog-cta__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Formulário */
+.blog-cta--form {
+  background: color-mix(in oklch, var(--primary) 7%, white);
+}
+.blog-cta__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+.blog-cta__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--brand-dark);
+}
+.blog-cta__field input {
+  height: 3rem;
+  padding-inline: 1rem;
+  border: 1px solid oklch(0.85 0 0);
+  border-radius: 0.5rem;
+  background: #fff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--brand-dark);
+}
+.blog-cta__field input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.blog-cta__trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.blog-cta__status {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: oklch(0.45 0.12 150);
+}
+.blog-cta__status[data-failed="true"] {
+  color: oklch(0.5 0.2 27);
+}
+.blog-cta__form.is-done .blog-cta__field,
+.blog-cta__form.is-done .blog-cta__button {
+  display: none;
+}
+@media (min-width: 48rem) {
+  .blog-cta--form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 2rem;
+  }
+}
+
+/* Editor: the block is shown as it will look, with controls on top. */
+.cta-node {
+  position: relative;
+  margin-block: 1.5rem;
+  border-radius: 0.75rem;
+  outline: 2px solid transparent;
+  outline-offset: 4px;
+  transition: outline-color 150ms ease-out;
+}
+.cta-node:hover,
+.ProseMirror-selectednode.cta-node {
+  outline-color: color-mix(in oklch, var(--primary) 45%, transparent);
+}
+.cta-node .blog-cta {
+  margin-block: 0;
+}
+.cta-node__controls {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.cta-node:hover .cta-node__controls,
+.cta-node:focus-within .cta-node__controls {
+  opacity: 1;
+}
+.cta-node__controls button {
+  height: 2rem;
+  padding-inline: 0.75rem;
+  border: 1px solid oklch(0.85 0 0);
+  border-radius: 0.375rem;
+  background: #fff;
+  color: var(--brand-dark);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cta-node__controls button:hover {
+  border-color: var(--brand-dark);
+}
+
+/* Franquia Protegida: the client-logo strip drifts left forever (two copies
+   of the list, so moving by half the track loops seamlessly). Reduced-motion
+   visitors get a static, scrollable row instead. */
+@keyframes fp-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.fp-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: fp-marquee 45s linear infinite;
+}
+.fp-marquee:hover .fp-marquee-track {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fp-marquee {
+    overflow-x: auto;
+  }
+  .fp-marquee-track {
+    animation: none;
   }
 }

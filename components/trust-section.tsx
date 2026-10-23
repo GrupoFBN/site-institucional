@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Lock, Layers, Boxes, TrendingUp, Zap } from "lucide-react";
 
 const HEADING_TEXT =
-  "Gerencie os benefícios da sua empresa com confiança. A FBN entrega o controle, a confiabilidade e a expertise que sua empresa precisa.";
+  "Gerencie os seguros e benefícios da sua empresa com confiança. A FBN entrega o controle, a confiabilidade e a expertise que sua empresa precisa.";
 const HEADING_WORDS = HEADING_TEXT.split(" ");
 
 // Reveal starts once the heading is 85% down the screen (just entering
@@ -21,37 +22,46 @@ const STICKY_TOP_PX = 96;
 // pinned pause before the cards scroll up into view.
 const SETTLE_SPACER_VH = 40;
 
-// Placeholder for the real GIFs, until those are ready: at rest each card
-// is a plain gray box with a small icon; on hover the ENTIRE card becomes
-// the media (an animated shimmer filling it edge to edge, standing in for
-// a real GIF/video), with the title/description overlaid in white at the
-// bottom — matching the reference's photo card. Swap the shimmer div for a
-// real <img>/<video> when the assets land.
+// Placeholder photos (Unsplash), until the real GIFs/videos are ready: at
+// rest each card is a plain gray box with a small icon; on hover the
+// ENTIRE card becomes the media, with the title/description overlaid in
+// white at the bottom — matching the reference's photo card. Swap the
+// <Image> src for a real GIF/video when the assets land.
 const POINTS = [
   {
     icon: Lock,
     title: "Confiança que você pode contar",
     description: "Corretora registrada e regulamentada pela SUSEP.",
+    image:
+      "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=800&q=80&auto=format&fit=crop",
   },
   {
     icon: Layers,
     title: "Confiabilidade de alto nível",
     description: "Atendimento dedicado do orçamento ao sinistro.",
+    image:
+      "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80&auto=format&fit=crop",
   },
   {
     icon: Boxes,
     title: "Tudo em um só lugar",
-    description: "Saúde, odontológico, vida e previdência com um só contato.",
+    description: "Seguros, benefícios corporativos e serviços financeiros com um só contato.",
+    image:
+      "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800&q=80&auto=format&fit=crop",
   },
   {
     icon: TrendingUp,
     title: "Otimizações inclusas",
     description: "Negociação ativa para reduzir custo e melhorar cobertura.",
+    image:
+      "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=80&auto=format&fit=crop",
   },
   {
     icon: Zap,
     title: "Fácil de contratar",
     description: "Processo simples, do orçamento à assinatura.",
+    image:
+      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80&auto=format&fit=crop",
   },
 ];
 
@@ -65,7 +75,7 @@ export function TrustSection() {
   // then a JS-transform version that trembled during real scrolling): a
   // single sticky element with nothing else depending on its exact
   // release timing has nothing left to get out of sync with.
-  const headingRef = useRef<HTMLParagraphElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [revealedCount, setRevealedCount] = useState(0);
 
   useEffect(() => {
@@ -110,9 +120,9 @@ export function TrustSection() {
           flow puts it, which works out to exactly flush with the
           heading's bottom edge at the moment of release — no math to
           tune, no invariant to fight. */}
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-7xl">
         <div className="bg-white pb-36 lg:sticky lg:top-24 lg:z-10">
-          <p
+          <h2
             ref={headingRef}
             className="max-w-2xl text-2xl font-medium leading-snug sm:text-3xl"
           >
@@ -126,23 +136,31 @@ export function TrustSection() {
                 {word}{" "}
               </span>
             ))}
-          </p>
+          </h2>
         </div>
         {/* Scroll room after the pinned heading, before the card row —
             see SETTLE_SPACER_VH above. */}
         <div style={{ height: `${SETTLE_SPACER_VH}vh` }} className="hidden lg:block" />
       </div>
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-[96rem]">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-          {POINTS.map(({ icon: Icon, title, description }) => (
+          {POINTS.map(({ icon: Icon, title, description, image }) => (
             <div
               key={title}
-              className="group relative h-64 overflow-hidden rounded-lg bg-gray-50 p-6"
+              className="group relative h-[28rem] overflow-hidden bg-gray-50 p-6"
             >
               <Icon className="h-5 w-5 text-gray-700 transition-opacity duration-300 group-hover:opacity-0" />
 
-              {/* Placeholder "media" — becomes the whole card on hover */}
-              <div className="absolute inset-0 animate-[shimmer_1.5s_linear_infinite] bg-[linear-gradient(110deg,#f3f4f6,45%,#e5e7eb,55%,#f3f4f6)] bg-[length:200%_100%] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              {/* Media — becomes the whole card on hover. Same grayscale +
+                  blue duotone treatment as the hero images. */}
+              <Image
+                src={image}
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 20vw, (min-width: 640px) 50vw, 100vw"
+                className="object-cover grayscale opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              />
+              <div className="absolute inset-0 bg-primary opacity-0 mix-blend-color transition-opacity duration-300 group-hover:opacity-100" />
               {/* Dark gradient so the overlaid text stays legible on hover */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 

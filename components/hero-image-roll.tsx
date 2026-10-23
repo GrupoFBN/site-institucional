@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
+// Bright office photography (placeholder — swap for real FBN photos when
+// available).
 const IMAGES = [
-  "https://picsum.photos/seed/fbn-hero-1/1920/1080",
-  "https://picsum.photos/seed/fbn-hero-2/1920/1080",
-  "https://picsum.photos/seed/fbn-hero-3/1920/1080",
-  "https://picsum.photos/seed/fbn-hero-4/1920/1080",
-  "https://picsum.photos/seed/fbn-hero-5/1920/1080",
+  "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1920&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=1920&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1524749292158-7540c2494485?w=1920&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=1920&q=80&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1920&q=80&auto=format&fit=crop",
 ];
 
 const INTERVAL_MS = 6000;
@@ -47,7 +49,7 @@ export function HeroImageRoll() {
             fill
             priority={index === 0}
             sizes="100vw"
-            className={`object-cover ${
+            className={`object-cover grayscale ${
               index === activeIndex || index === prevIndex
                 ? "animate-kenburns"
                 : ""
@@ -60,7 +62,9 @@ export function HeroImageRoll() {
           />
         </div>
       ))}
+      <div className="absolute inset-0 bg-primary mix-blend-color" />
       <div className="absolute inset-0 bg-black/50" />
+      <div className="film-grain pointer-events-none absolute inset-0" />
       <button
         type="button"
         onClick={() => setPaused((current) => !current)}
