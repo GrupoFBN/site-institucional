@@ -37,7 +37,7 @@ export function CtaFinal() {
                 variant="outline"
                 className="mt-8 border-white bg-transparent text-white hover:bg-white hover:text-brand-dark"
               >
-                <Link href="#" aria-label="Fale com a gente sobre seguros e benefícios">
+                <Link href="#contato" aria-label="Fale com a gente sobre seguros e benefícios">
                   Fale com a gente
                 </Link>
               </Button>
@@ -104,7 +104,7 @@ export function CtaFinal() {
               em seguros, benefícios corporativos e serviços financeiros.
             </p>
             <Link
-              href="#"
+              href="#servicos"
               className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white hover:underline"
             >
               Conheça nossos serviços

@@ -11,6 +11,7 @@ const COLUMNS = [
     title: "Empresa",
     links: [
       { href: "/", label: "Início" },
+      { href: "/blog", label: "Blog" },
       { href: "#", label: "Quem somos" },
       { href: "#", label: "Trabalhe conosco" },
     ],
@@ -20,13 +21,9 @@ const COLUMNS = [
     links: [
       { href: "#", label: "Para você" },
       { href: "#", label: "Para sua empresa" },
-      { href: "#", label: "Franquia protegida" },
+      { href: "/franquia-protegida", label: "Franquia protegida" },
       { href: "#", label: "Financeiro" },
     ],
-  },
-  {
-    title: "Contato",
-    links: [{ href: "#", label: "Fale com a gente" }],
   },
 ];
 
@@ -57,7 +54,7 @@ export function Footer() {
           />
         </Link>
       </div>
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-10 sm:grid-cols-4">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-10 sm:grid-cols-3">
         {COLUMNS.map((column) => (
           <div key={column.title}>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-white/60">
@@ -74,11 +71,14 @@ export function Footer() {
             </ul>
           </div>
         ))}
-        <div>
+        {/* Target of every "Fale com a gente" CTA on the site (#contato).
+            Focusable so the jump moves focus here too, and full width on
+            phones so the e-mail never forces a sideways scroll. */}
+        <div id="contato" tabIndex={-1} className="col-span-2 outline-none sm:col-span-1">
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-white/60">
             Fale com a gente
           </h3>
-          <ul className="space-y-2 text-sm text-white/80">
+          <ul className="space-y-2 text-sm text-white/80 [overflow-wrap:anywhere]">
             <li>{ADDRESS}</li>
             <li>
               <a href={`tel:+55${PHONE.replace(/\D/g, "")}`} className="hover:text-white">
@@ -93,7 +93,7 @@ export function Footer() {
           </ul>
         </div>
       </div>
-      <p className="mx-auto mt-12 max-w-7xl text-xs text-white/40">
+      <p className="mx-auto mt-12 max-w-7xl text-xs text-white/60">
         © {new Date().getFullYear()} FBN. Todos os direitos reservados.
       </p>
     </footer>

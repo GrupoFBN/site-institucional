@@ -126,7 +126,7 @@ export default async function BlogPostPage({ params }: Props) {
                 Peça um estudo sem compromisso. Um só contato da FBN cuida da cotação até o pós-venda.
               </p>
               <Button asChild size="lg">
-                <Link href="#">Fale com a gente</Link>
+                <Link href="#contato">Fale com a gente</Link>
               </Button>
             </aside>
             )}

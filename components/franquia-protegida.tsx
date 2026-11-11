@@ -1,10 +1,11 @@
 import { Sora } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
-import { House, Mail } from "lucide-react";
+import { House, Mail, MessageCircle } from "lucide-react";
 import { FpTestimonials, type FpQuote } from "@/components/fp-carousel";
 import { FpHeader } from "@/components/fp-header";
 import { FpGallery, type FpPhoto } from "@/components/fp-gallery";
+import { FP_WHATSAPP } from "@/lib/fp-contacts";
 
 // Server-rendered pieces of the Franquia Protegida page. Copy and assets come
 // from the program's current site (franquiaprotegida.com.br); nothing here is
@@ -320,6 +321,16 @@ const PEOPLE = [
   },
 ];
 
+// Inline because Simple Icons no longer serves the LinkedIn mark (its CDN
+// URL returns 404), which left a broken image in both places it's used.
+function LinkedinIcon({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.064 2.064 0 1 1 0-4.128 2.064 2.064 0 0 1 0 4.128zM7.119 20.452H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+    </svg>
+  );
+}
+
 const pillLink =
   "flex h-14 items-center justify-center gap-3 rounded-full bg-white/[0.07] px-[15px] text-base font-light text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
 
@@ -351,10 +362,22 @@ export function FpContact() {
                   rel="noopener"
                   className={`${pillLink} mt-5 w-full max-w-[214px]`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="https://cdn.simpleicons.org/linkedin/ffffff" alt="" width={18} height={18} />
+                  <LinkedinIcon className="h-[18px] w-[18px]" />
                   Linkedin
                 </a>
+                {FP_WHATSAPP.filter((contact) => person.name.startsWith(contact.name)).map((contact) => (
+                  <a
+                    key={contact.href}
+                    href={contact.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`WhatsApp de ${contact.name}, ${contact.phone} (abre em nova aba)`}
+                    className={`${pillLink} mt-3 w-full max-w-[214px]`}
+                  >
+                    <MessageCircle aria-hidden="true" className="h-[18px] w-[18px]" />
+                    {contact.phone}
+                  </a>
+                ))}
               </li>
             ))}
           </ul>
@@ -400,10 +423,14 @@ export function FpFooter() {
                 target="_blank"
                 rel="noopener"
                 aria-label={item.label}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white transition hover:bg-[#F8F8FF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#2065F1] transition hover:bg-[#F8F8FF] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`https://cdn.simpleicons.org/${item.slug}/2065F1`} alt="" width={18} height={18} />
+                {item.slug === "linkedin" ? (
+                  <LinkedinIcon className="h-[18px] w-[18px]" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`https://cdn.simpleicons.org/${item.slug}/2065F1`} alt="" width={18} height={18} />
+                )}
               </a>
             </li>
           ))}

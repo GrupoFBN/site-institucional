@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { MessageCircle, X } from "lucide-react";
-
-const CONTACTS = [
-  { name: "Kleber", href: "https://wa.me/5511978774754", phone: "11 97877-4754" },
-  { name: "Gabriela", href: "https://wa.me/5511947756145", phone: "11 94775-6145" },
-];
+import { FP_WHATSAPP as CONTACTS } from "@/lib/fp-contacts";
 
 // The green button fixed to the corner, as on the current site. It offers
 // both numbers the program lists (Kleber and Gabriela).

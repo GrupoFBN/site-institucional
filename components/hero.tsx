@@ -11,7 +11,7 @@ export function Hero() {
     >
       <HeroImageRoll />
       <Header />
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center pointer-events-none">
+      <div className="on-dark relative z-10 flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center pointer-events-none">
         {/* No eyebrow/kicker above the headline — the craft floor bans it
             outright (no brief earns it back). The subtitle right below
             already names seguros/benefícios/financeiro in full, so
@@ -34,7 +34,7 @@ export function Hero() {
           size="lg"
           className="pointer-events-auto mt-2 hover:bg-[color-mix(in_oklch,var(--primary),black_15%)]"
         >
-          <Link href="#" aria-label="Fale com a gente sobre seguros e benefícios da sua empresa">
+          <Link href="#contato" aria-label="Fale com a gente sobre seguros e benefícios da sua empresa">
             Fale com a gente
           </Link>
         </Button>

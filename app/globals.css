@@ -87,13 +87,25 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  /* Solid focus ring for every element that doesn't style its own: brand
+     blue on light sections (about 8:1 on white), white inside the navy and
+     blue sections and the hero, where the blue ring would disappear. */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  :where(.bg-brand-dark, .bg-primary, .on-dark) :focus-visible {
+    outline-color: #fff;
   }
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
+    /* Anchor jumps (#contato, #conteudo) land below the fixed header. */
+    scroll-padding-top: 6rem;
   }
 }
 
@@ -390,6 +402,10 @@
 .blog-cta__link:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
+}
+.blog-cta--banner .blog-cta__button:focus-visible,
+.blog-cta--banner .blog-cta__link:focus-visible {
+  outline-color: #fff;
 }
 
 /* Caixa */

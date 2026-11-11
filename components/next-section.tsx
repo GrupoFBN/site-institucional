@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Plus, ArrowRight } from "lucide-react";
 
 // Real category names (per user instruction, 2026-10-01). Descriptions
@@ -19,6 +20,7 @@ import { Plus, ArrowRight } from "lucide-react";
 const CATEGORIES = [
   {
     title: "Benefícios",
+    href: "#contato",
     description:
       "Planos de saúde, odontológico, vida e previdência pra você, sua família e o seu time.",
     image:
@@ -26,6 +28,7 @@ const CATEGORIES = [
   },
   {
     title: "Ramos elementares",
+    href: "#contato",
     description:
       "Seguro empresarial, de frota, de carga, D&O, E&O e riscos cibernéticos, entre outros, pra proteger o patrimônio e a operação da sua empresa.",
     image:
@@ -33,12 +36,14 @@ const CATEGORIES = [
   },
   {
     title: "Franquia protegida",
+    href: "/franquia-protegida",
     description: "Projetos customizados de proteção pra franqueadores e suas unidades franqueadas.",
     image:
       "https://images.unsplash.com/photo-1476703993599-0035a21b17a9?w=1200&q=80&auto=format&fit=crop",
   },
   {
     title: "Monetiza",
+    href: "#contato",
     description: "Conheça o programa Monetiza da FBN.",
     image:
       "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=1200&q=80&auto=format&fit=crop",
@@ -53,7 +58,7 @@ export function NextSection() {
   const [activeIndex, setActiveIndex] = useState(CATEGORIES.length - 1);
 
   return (
-    <section className="bg-white text-brand-dark">
+    <section id="servicos" className="bg-white text-brand-dark">
       <div className="grid lg:grid-cols-2">
         <div className="py-16 pl-6 pr-6 sm:pl-10 lg:py-24">
           {/* Heading gets its own containing block (heading + spacer only)
@@ -98,19 +103,20 @@ export function NextSection() {
                   </button>
                   <div
                     id={panelId}
+                    inert={!open ? true : undefined}
                     className={`grid overflow-hidden transition-all duration-300 ${open ? "pb-6" : ""}`}
                     style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
                   >
                     <div className="min-h-0">
                       <p className="text-pretty text-gray-600">{category.description}</p>
-                      <a
-                        href="#"
+                      <Link
+                        href={category.href}
                         aria-label={`Saiba mais sobre ${category.title}`}
                         className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-dark hover:underline"
                       >
                         Saiba mais
                         <ArrowRight className="h-4 w-4" />
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>

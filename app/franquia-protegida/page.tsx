@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FpWhatIs } from "@/components/fp-what-is";
 import { FpWhatsapp } from "@/components/fp-whatsapp";
 import { PartnerLogos } from "@/components/partner-logos";
-import { CLIENTS, clientSrc, FpCases, FpHero, FpMoments, sora } from "@/components/franquia-protegida";
+import { CLIENTS, clientSrc, FpCases, FpContact, FpFooter, FpHero, FpMoments, sora } from "@/components/franquia-protegida";
 
 // The program's clients, spread over the five ticker slots the home page
 // uses, shown as their logos.
@@ -59,8 +59,12 @@ export default function FranquiaProtegidaPage() {
           <FpWhatIs />
           <FpMoments />
           <FpCases />
+          <FpContact />
         </div>
       </main>
+      <div className={sora.className}>
+        <FpFooter />
+      </div>
       <FpWhatsapp />
     </>
   );

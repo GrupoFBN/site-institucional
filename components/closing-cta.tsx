@@ -18,7 +18,7 @@ export function ClosingCta() {
           Se você está construindo para crescer, não existe alternativa
         </h2>
         <Link
-          href="#"
+          href="#contato"
           className="inline-flex h-12 items-center rounded-lg bg-white px-6 text-sm font-semibold text-brand-dark transition hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
         >
           Fale com a gente
